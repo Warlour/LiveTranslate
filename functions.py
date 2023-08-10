@@ -5,9 +5,7 @@ import time
 
 CHUNK_SIZE = 512
 
-filename = "loopback_record.wav"
-
-async def capture_audio_async(duration: float = 5.0) -> str:
+async def capture_audio_async(file, duration: float = 5.0) -> str:
     loop = asyncio.get_event_loop()
 
     # Use asyncio.to_thread() to run the blocking code in a separate thread
@@ -39,7 +37,7 @@ async def capture_audio_async(duration: float = 5.0) -> str:
                 else:
                     exit()
             
-            wave_file = wave.open(filename, 'wb')
+            wave_file = wave.open(file, 'wb')
             wave_file.setnchannels(default_speakers["maxInputChannels"])
             wave_file.setsampwidth(pyaudio.get_sample_size(pyaudio.paInt16))
             wave_file.setframerate(int(default_speakers["defaultSampleRate"]))
@@ -71,7 +69,7 @@ async def capture_audio_async(duration: float = 5.0) -> str:
 
     await asyncio.to_thread(blocking_capture_audio)
 
-    return filename
+    return file
 
 #import speech_recognition as sr
 import whisper
