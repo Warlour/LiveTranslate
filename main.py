@@ -1,16 +1,24 @@
+import asyncio
 import functions
+import os
 
-def main():
+async def main():
     while True:
-        text = functions.recognize_speech(functions.capture_audio())
+        # Capture audio asynchronously
+        audio_future = asyncio.ensure_future(functions.capture_audio_async(2.0))
+
+        # Start speech recognition asynchronously
+        text = await functions.recognize_speech_async(audio_future)
+
         if text:
             print(text)
 
-    # if text:
-    #     translation = translate_to_english(text)
-    #     print(f"Original: {text}")
-    #     print(f"Translation: {translation}", end="\n\n")
-    #     # Display translation in UI if applicable
+        # Display translation in UI if applicable
 
 if __name__ == "__main__":
-    main()
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("Program interrupted by user. Exiting...")
+        os.remove(functions.filename)

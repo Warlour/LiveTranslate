@@ -1,27 +1,27 @@
 from _spinner_helper import Spinner
 import pyaudiowpatch as pyaudio
 import wave
-import time, os
+import time
 
 CHUNK_SIZE = 512
 
 filename = "loopback_record.wav"
 
-def capture_audio(duration: float = 5.0) -> str:
-    try:
+async def capture_audio_async(duration: float = 5.0) -> str:
+    loop = asyncio.get_event_loop()
+
+    # Use asyncio.to_thread() to run the blocking code in a separate thread
+    def blocking_capture_audio():
         # Capture audio using PyAudioWPatch
         # Return the audio data
-        with pyaudio.PyAudio() as p, Spinner() as spinner:
+        with pyaudio.PyAudio() as p:
             """
             Create PyAudio instance via context manager.
-            Spinner is a helper class, for `pretty` output
             """
             try:
                 # Get default WASAPI info
                 wasapi_info = p.get_host_api_info_by_type(pyaudio.paWASAPI)
             except OSError:
-                spinner.print("Looks like WASAPI is not available on the system. Exiting...")
-                spinner.stop()
                 exit()
             
             # Get default WASAPI speakers
@@ -37,11 +37,7 @@ def capture_audio(duration: float = 5.0) -> str:
                         default_speakers = loopback
                         break
                 else:
-                    spinner.print("Default loopback output device not found.\n\nRun `py -m pyaudiowpatch` to check available devices.\nExiting...\n")
-                    spinner.stop()
                     exit()
-
-            spinner.print(f"Recording from: ({default_speakers['index']}){default_speakers['name']}")
             
             wave_file = wave.open(filename, 'wb')
             wave_file.setnchannels(default_speakers["maxInputChannels"])
@@ -66,23 +62,22 @@ def capture_audio(duration: float = 5.0) -> str:
                 After leaving the context, everything will
                 be correctly closed(Stream, PyAudio manager)            
                 """
-                spinner.print(f"The next {duration} seconds will be written to {filename}")
                 try:
                     time.sleep(duration) # Blocking execution while playing
                 except KeyboardInterrupt:
-                    spinner.print(f"Program interrupted by user. Exiting...")
-                    spinner.stop()
                     exit()
             
             wave_file.close()
-            return filename
-    except KeyboardInterrupt:
-        os.remove(filename)
+
+    await asyncio.to_thread(blocking_capture_audio)
+
+    return filename
 
 #import speech_recognition as sr
 import whisper
+import asyncio
 
-def recognize_speech(file: str, model_name: str = "tiny"):
+async def recognize_speech_async(audio_future, model_name: str = "tiny"):
     '''
     Recognize the speech in the audio data
 
@@ -98,5 +93,9 @@ def recognize_speech(file: str, model_name: str = "tiny"):
     '''
 
     model = whisper.load_model(model_name)
-    result = model.transcribe(file)
+    
+    # Wait for the audio capture to complete before transcribing
+    await audio_future
+
+    result = model.transcribe(audio_future.result())
     return result["text"]
