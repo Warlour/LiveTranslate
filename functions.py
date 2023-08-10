@@ -97,5 +97,5 @@ async def recognize_speech_async(audio_future, model_name: str = "tiny"):
     # Wait for the audio capture to complete before transcribing
     await audio_future
 
-    result = model.transcribe(audio_future.result())
+    result = model.transcribe(audio_future.result(), condition_on_previous_text=True)
     return result["text"]
